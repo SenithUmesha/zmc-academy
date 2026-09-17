@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.ComponentModel;
-using System.Drawing;
 using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Data.SqlClient;
+using System.Windows.Forms;
+using WF_CW2_TEST.Infrastructure;
 
 namespace WF_CW2_TEST
 {
@@ -20,56 +16,52 @@ namespace WF_CW2_TEST
 
         private void btnsubmit_Click(object sender, EventArgs e)
         {
-            if (ValidateChildren(ValidationConstraints.Enabled))
+            if (!ValidateChildren(ValidationConstraints.Enabled))
             {
-                DateTime time = DateTime.Now;
-                string format = "yyyy-MM-dd HH:mm:ss";
+                return;
+            }
 
-                string connectionString;
-                SqlConnection cnn;
+            try
+            {
+                using (SqlConnection connection = Database.OpenConnection())
+                using (var command = new SqlCommand(
+                    "INSERT INTO Report_problem(Summary,Details,[date],Id) VALUES(@Summary,@Details,@Date,@Id)", connection))
+                {
+                    command.Parameters.Add("@Summary", SqlDbType.VarChar, 100).Value = txtsummary.Text.Trim();
+                    command.Parameters.Add("@Details", SqlDbType.VarChar, 500).Value = txtdetails.Text.Trim();
+                    command.Parameters.Add("@Date", SqlDbType.DateTime).Value = DateTime.Now;
+                    command.Parameters.Add("@Id", SqlDbType.VarChar, 10).Value = Signin1.signinID;
+                    command.ExecuteNonQuery();
+                }
 
-                connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS;Initial catalog = ZMC_Academy;User ID=admin;Password=admin";
-
-                cnn = new SqlConnection(connectionString);
-                cnn.Open();
-
-                string sql = "INSERT INTO Report_problem(Summary,Details,date,Id) VALUES('" + txtsummary.Text + "','" + txtdetails.Text + "','" + time.ToString(format) + "','" + Signin1.signinID + "' )";
-                SqlCommand cmd = new SqlCommand(sql, cnn);
-                cmd.ExecuteNonQuery();
-                cnn.Close();
-
-                MessageBox.Show("Sumbitted Successfully", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }            
+                MessageBox.Show("Submitted successfully.", "Information",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                txtsummary.Clear();
+                txtdetails.Clear();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("The report could not be submitted. " + ex.Message,
+                    "Support", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void txtsummary_Validating(object sender, CancelEventArgs e)
         {
-            if (string.IsNullOrEmpty(txtsummary.Text))
-            {
-                e.Cancel = true;
-                txtsummary.Focus();
-                errorProvider1.SetError(txtsummary, "Please Enter Your Problem Summary");
-            }
-            else
-            {
-                e.Cancel = false;
-                errorProvider1.SetError(txtsummary, null);
-            }
+            ValidateRequired(txtsummary, "Please Enter Your Problem Summary", e);
         }
 
         private void txtdetails_Validating(object sender, CancelEventArgs e)
         {
-            if (string.IsNullOrEmpty(txtdetails.Text))
-            {
-                e.Cancel = true;
-                txtdetails.Focus();
-                errorProvider1.SetError(txtdetails, "Please Enter Your Problem Details");
-            }
-            else
-            {
-                e.Cancel = false;
-                errorProvider1.SetError(txtdetails, null);
-            }
+            ValidateRequired(txtdetails, "Please Enter Your Problem Details", e);
+        }
+
+        private void ValidateRequired(Control control, string message, CancelEventArgs e)
+        {
+            bool missing = string.IsNullOrWhiteSpace(control.Text);
+            e.Cancel = missing;
+            errorProvider1.SetError(control, missing ? message : null);
+            if (missing) control.Focus();
         }
     }
 }
