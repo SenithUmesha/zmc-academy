@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+using System;
 using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Data.SqlClient;
+using System.Windows.Forms;
+using WF_CW2_TEST.Infrastructure;
+using WF_CW2_TEST.Security;
 
 namespace WF_CW2_TEST
 {
@@ -20,48 +16,52 @@ namespace WF_CW2_TEST
 
         private void btnsignin_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrWhiteSpace(txtnewpass.Text))
+            {
+                MessageBox.Show("Please enter a new password.", "Reset Password",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (txtnewpass.Text != txtconfirmnewpass.Text)
+            {
+                MessageBox.Show("Passwords don't match.", "Reset Password",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             try
             {
-                if (txtnewpass.Text == txtconfirmnewpass.Text)
+                using (SqlConnection connection = Database.OpenConnection())
+                using (var command = new SqlCommand(
+                    "UPDATE Registration SET Password = @Password WHERE Id = @Id", connection))
                 {
-                    string connectionString;
-                    SqlConnection cnn;
+                    command.Parameters.Add("@Password", SqlDbType.VarChar, 255)
+                        .Value = PasswordHasher.Hash(txtconfirmnewpass.Text);
+                    command.Parameters.Add("@Id", SqlDbType.VarChar, 10)
+                        .Value = Signin1.SigninForget;
 
-                    connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS;Initial catalog = ZMC_Academy;User ID=admin;Password=admin";
-
-                    cnn = new SqlConnection(connectionString);
-                    cnn.Open();
-                    SqlCommand command;
-                    SqlDataAdapter adapter = new SqlDataAdapter();
-                    string sql = "";
-                    sql = "Update Registration SET Password = '" + txtconfirmnewpass.Text + "' where Id = " + Signin1.SigninForget + "";
-                    command = new SqlCommand(sql, cnn);
-                    adapter.UpdateCommand = new SqlCommand(sql, cnn);
-                    adapter.UpdateCommand.ExecuteNonQuery();
-                    command.Dispose();
-                    cnn.Close();
-
-                    if(MessageBox.Show("Password Reset Successfully", "Reset Password", MessageBoxButtons.OK, MessageBoxIcon.Information)== DialogResult.OK)
+                    if (command.ExecuteNonQuery() != 1)
                     {
-                        this.Hide();
-                        Signin1 signin1 = new Signin1();
-                        signin1.ShowDialog();
+                        throw new InvalidOperationException("The account could not be found.");
                     }
                 }
-                else
-                {
-                    MessageBox.Show("Passwords Doesn't Match", "Reset Password", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+
+                MessageBox.Show("Password reset successfully.", "Reset Password",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Hide();
+                new Signin1().ShowDialog();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show("Password reset failed. " + ex.Message,
+                    "Reset Password", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void pbclose_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
     }
 }
