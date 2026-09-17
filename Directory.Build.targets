@@ -1,0 +1,7 @@
+<Project>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)WF CW2 TEST\Infrastructure\Database.cs" Link="Infrastructure\Database.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)WF CW2 TEST\Security\PasswordHasher.cs" Link="Security\PasswordHasher.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)WF CW2 TEST\Services\EmailService.cs" Link="Services\EmailService.cs" />
+  </ItemGroup>
+</Project>
