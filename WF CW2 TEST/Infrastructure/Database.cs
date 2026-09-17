@@ -6,13 +6,21 @@ namespace WF_CW2_TEST.Infrastructure
     internal static class Database
     {
         private const string DefaultConnectionString =
-            @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=ZMC_Academy;Integrated Security=True";
+            @"Data Source=(LocalDB)\MSSQLLocalDB;Initial Catalog=ZMC_Academy;Integrated Security=True";
 
         public static string ConnectionString
         {
             get
             {
-                string configured = Environment.GetEnvironmentVariable("ZMC_DB_CONNECTION");
+                string configured = Environment.GetEnvironmentVariable("ZMC_DB_CONNECTION_STRING");
+
+                // Keep the shorter name as a compatibility fallback for anyone who used
+                // the first cleanup pass locally.
+                if (string.IsNullOrWhiteSpace(configured))
+                {
+                    configured = Environment.GetEnvironmentVariable("ZMC_DB_CONNECTION");
+                }
+
                 return string.IsNullOrWhiteSpace(configured)
                     ? DefaultConnectionString
                     : configured;
