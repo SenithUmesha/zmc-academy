@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+using System;
 using System.Data.SqlClient;
-using System.Net;
-using System.Net.Mail;
+using System.Windows.Forms;
+using WF_CW2_TEST.Infrastructure;
+using WF_CW2_TEST.Security;
+using WF_CW2_TEST.Services;
 
 namespace WF_CW2_TEST
 {
@@ -24,92 +18,151 @@ namespace WF_CW2_TEST
 
         private void pbclose_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            this.Hide();
-            Signup7 signup7 = new Signup7();
-            signup7.Show();
+            Hide();
+            new Signup7().Show();
         }
 
         private void btnsignin_Click(object sender, EventArgs e)
         {
-            if (randomcode2 == txtverificode.Text)
+            if (!string.Equals(randomcode2, txtverificode.Text.Trim(), StringComparison.Ordinal))
             {
-                string connectionString;
-                SqlConnection cnn;
-
-                connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS;Initial catalog = ZMC_Academy;User ID=admin;Password=admin";
-
-                cnn = new SqlConnection(connectionString);
-                cnn.Open();
-
-                string sql = "INSERT INTO Registration(Name,Id,Password,Address,Contact_number,Birth_of_date,Email) VALUES('" + Signup1.name + "','" + Signup1.id + "','" + Signup1.password + "','" + Signup1.address + "','" + Signup1.phonenum + "','" + Signup1.dob + "','" + Signup1.email + "')";
-                SqlCommand cmd = new SqlCommand(sql, cnn);
-                cmd.ExecuteNonQuery();
-
-                string sql1 = "INSERT INTO Ol_Results(Year,Mathematics,Science,Sinhala,English,History,Religion,Bucket_1,Bucket_2,Bucket_3,Id) VALUES('" + Signup2.OLyear + "','" + Signup2.maths + "','" + Signup2.science + "','" + Signup2.sinhala + "','" + Signup2.OLenglish + "','" + Signup2.history + "','" + Signup2.religion + "','" + Signup2.OLbucket1 + "','" + Signup2.OLbucket2 + "','" + Signup2.OLbucket3 + "','" + Signup1.id + "')";
-                SqlCommand cmd1 = new SqlCommand(sql1, cnn);
-                cmd1.ExecuteNonQuery();
-
-                string sql2 = "INSERT INTO Al_Results(Year,Stream,Bucket_1,Bucket_2,Bucket_3,English,Id) VALUES('" + Signup3.ALyear + "','" + Signup3.ALstream + "','" + Signup3.ALbucket1 + "','" + Signup3.ALbucket2 + "','" + Signup3.ALbucket3 + "','" + Signup3.ALenglish + "','" + Signup1.id + "')";
-                SqlCommand cmd2 = new SqlCommand(sql2, cnn);
-                cmd2.ExecuteNonQuery();
-
-                string sql3 = "INSERT INTO Other_Qualifications(Category,Name,Reason,Year,Id) VALUES('" + Signup4.OQcategory1 + "','" + Signup4.OQname1 + "','" + Signup4.OQreason1 + "','" + Signup4.OQyear1 + "','" + Signup1.id + "')";
-                SqlCommand cmd3 = new SqlCommand(sql3, cnn);
-                cmd3.ExecuteNonQuery();
-
-                string sql4 = "INSERT INTO Other_Qualifications1(Category,Name,Reason,Year,Id) VALUES('" + Signup5.OQcategory2 + "','" + Signup5.OQname2 + "','" + Signup5.OQreason2 + "','" + Signup5.OQyear2 + "','" + Signup1.id + "')";
-                SqlCommand cmd4 = new SqlCommand(sql4, cnn);
-                cmd4.ExecuteNonQuery();
-
-                string sql5 = "INSERT INTO Course(Course_school,Course_name,Id) VALUES('" + Signup6.Courseschool + "','" + Signup6.Coursecourse + "','" + Signup1.id + "')";
-                SqlCommand cmd5 = new SqlCommand(sql5, cnn);
-                cmd5.ExecuteNonQuery();
-
-                string sql6 = "INSERT INTO Payment(Method,Type,Card_no,Expire_date,Cvc,Id) VALUES('" + Signup7.method + "','" + Signup7.type + "','" + Signup7.cardno + "','" + Signup7.expiredate + "','" + Signup7.cvc + "','" + Signup1.id + "')";
-                SqlCommand cmd6 = new SqlCommand(sql6, cnn);
-                cmd6.ExecuteNonQuery();
-
-                cnn.Close();
-
-                this.Hide();
-                Signup8 signup8 = new Signup8();
-                signup8.ShowDialog();
+                MessageBox.Show("Please enter the valid code.", "Warning",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
-            else
+
+            try
             {
-                MessageBox.Show("Please Enter the Valid Code", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                using (SqlConnection connection = Database.OpenConnection())
+                using (SqlTransaction transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        Execute(connection, transaction,
+                            "INSERT INTO Registration(Name,Id,Password,Address,Contact_number,Birth_of_date,Email) " +
+                            "VALUES(@Name,@Id,@Password,@Address,@Contact,@BirthDate,@Email)",
+                            new SqlParameter("@Name", Signup1.name),
+                            new SqlParameter("@Id", Signup1.id),
+                            new SqlParameter("@Password", PasswordHasher.Hash(Signup1.password)),
+                            new SqlParameter("@Address", Signup1.address),
+                            new SqlParameter("@Contact", Signup1.phonenum),
+                            new SqlParameter("@BirthDate", DateTime.Parse(Signup1.dob)),
+                            new SqlParameter("@Email", Signup1.email));
+
+                        Execute(connection, transaction,
+                            "INSERT INTO Ol_Results(Year,Mathematics,Science,Sinhala,English,History,Religion,Bucket_1,Bucket_2,Bucket_3,Id) " +
+                            "VALUES(@Year,@Mathematics,@Science,@Sinhala,@English,@History,@Religion,@Bucket1,@Bucket2,@Bucket3,@Id)",
+                            new SqlParameter("@Year", Signup2.OLyear),
+                            new SqlParameter("@Mathematics", Signup2.maths),
+                            new SqlParameter("@Science", Signup2.science),
+                            new SqlParameter("@Sinhala", Signup2.sinhala),
+                            new SqlParameter("@English", Signup2.OLenglish),
+                            new SqlParameter("@History", Signup2.history),
+                            new SqlParameter("@Religion", Signup2.religion),
+                            new SqlParameter("@Bucket1", Signup2.OLbucket1),
+                            new SqlParameter("@Bucket2", Signup2.OLbucket2),
+                            new SqlParameter("@Bucket3", Signup2.OLbucket3),
+                            new SqlParameter("@Id", Signup1.id));
+
+                        Execute(connection, transaction,
+                            "INSERT INTO Al_Results(Year,Stream,Bucket_1,Bucket_2,Bucket_3,English,Id) " +
+                            "VALUES(@Year,@Stream,@Bucket1,@Bucket2,@Bucket3,@English,@Id)",
+                            new SqlParameter("@Year", Signup3.ALyear),
+                            new SqlParameter("@Stream", Signup3.ALstream),
+                            new SqlParameter("@Bucket1", Signup3.ALbucket1),
+                            new SqlParameter("@Bucket2", Signup3.ALbucket2),
+                            new SqlParameter("@Bucket3", Signup3.ALbucket3),
+                            new SqlParameter("@English", Signup3.ALenglish),
+                            new SqlParameter("@Id", Signup1.id));
+
+                        Execute(connection, transaction,
+                            "INSERT INTO Other_Qualifications(Category,Name,Reason,Year,Id) VALUES(@Category,@Name,@Reason,@Year,@Id)",
+                            new SqlParameter("@Category", Signup4.OQcategory1),
+                            new SqlParameter("@Name", Signup4.OQname1),
+                            new SqlParameter("@Reason", Signup4.OQreason1),
+                            new SqlParameter("@Year", Signup4.OQyear1),
+                            new SqlParameter("@Id", Signup1.id));
+
+                        Execute(connection, transaction,
+                            "INSERT INTO Other_Qualifications1(Category,Name,Reason,Year,Id) VALUES(@Category,@Name,@Reason,@Year,@Id)",
+                            new SqlParameter("@Category", Signup5.OQcategory2),
+                            new SqlParameter("@Name", Signup5.OQname2),
+                            new SqlParameter("@Reason", Signup5.OQreason2),
+                            new SqlParameter("@Year", Signup5.OQyear2),
+                            new SqlParameter("@Id", Signup1.id));
+
+                        Execute(connection, transaction,
+                            "INSERT INTO Course(Course_school,Course_name,Id) VALUES(@School,@Course,@Id)",
+                            new SqlParameter("@School", Signup6.Courseschool),
+                            new SqlParameter("@Course", Signup6.Coursecourse),
+                            new SqlParameter("@Id", Signup1.id));
+
+                        string last4 = Signup7.cardno.Length <= 4
+                            ? Signup7.cardno
+                            : Signup7.cardno.Substring(Signup7.cardno.Length - 4);
+
+                        Execute(connection, transaction,
+                            "INSERT INTO Payment(Method,Type,Card_last4,Expire_date,Id) VALUES(@Method,@Type,@Last4,@ExpireDate,@Id)",
+                            new SqlParameter("@Method", Signup7.method),
+                            new SqlParameter("@Type", Signup7.type),
+                            new SqlParameter("@Last4", last4),
+                            new SqlParameter("@ExpireDate", Signup7.expiredate),
+                            new SqlParameter("@Id", Signup1.id));
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+
+                // Card verification values are only needed for the signup screen; never persist the CVC.
+                Signup7.cardno = null;
+                Signup7.cvc = null;
+
+                Hide();
+                new Signup8().ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not create the account. " + ex.Message,
+                    "Registration Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private static void Execute(
+            SqlConnection connection,
+            SqlTransaction transaction,
+            string sql,
+            params SqlParameter[] parameters)
+        {
+            using (var command = new SqlCommand(sql, connection, transaction))
+            {
+                command.Parameters.AddRange(parameters);
+                command.ExecuteNonQuery();
             }
         }
 
         private void Signup9_Load(object sender, EventArgs e)
         {
+            randomcode2 = EmailService.GenerateVerificationCode();
+
             try
-            { 
-                Random random = new Random();
-                randomcode2 = (random.Next(999999)).ToString();
-
-                MailMessage mail = new MailMessage();
-                SmtpClient SmtpServer = new SmtpClient("smtp.gmail.com");
-
-                mail.From = new MailAddress("senithumeshac@gmail.com");
-                mail.To.Add(Signup1.email);
-                mail.Subject = "Password reset code";
-                mail.Body = "Here is your code : " + randomcode2;
-
-                SmtpServer.Port = 587;
-                SmtpServer.Credentials = new System.Net.NetworkCredential("senithumeshac@gmail.com", "senithumeshac#");
-                SmtpServer.EnableSsl = true;
-
-                SmtpServer.Send(mail);
+            {
+                EmailService.SendVerificationCode(Signup1.email, randomcode2);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show(
+                    "Verification email could not be sent. Configure SMTP with the ZMC_SMTP_* environment variables.\n\n" + ex.Message,
+                    "Email Configuration", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
     }
