@@ -1,19 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+using System;
 using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Data.SqlClient;
+using System.Windows.Forms;
+using WF_CW2_TEST.Infrastructure;
+using WF_CW2_TEST.Security;
 
 namespace WF_CW2_TEST
 {
     public partial class Signin1 : Form
     {
         public static string signinID;
+        public static string SigninForget;
 
         public Signin1()
         {
@@ -22,118 +19,119 @@ namespace WF_CW2_TEST
 
         private void txtsigninid_Enter(object sender, EventArgs e)
         {
-            if (txtsigninid.Text.Equals("     ID"))
-            {
-                txtsigninid.Text = "";
-            }
+            if (txtsigninid.Text.Equals("     ID")) txtsigninid.Text = "";
         }
 
         private void txtsigninid_Leave(object sender, EventArgs e)
         {
-            if (txtsigninid.Text.Equals(""))
-            {
-                txtsigninid.Text = "     ID";
-            }
+            if (txtsigninid.Text.Equals("")) txtsigninid.Text = "     ID";
         }
 
         private void txtsinginpassword_Enter(object sender, EventArgs e)
         {
-            if (txtsinginpassword.Text.Equals("     Password"))
-            {
-                txtsinginpassword.Text = "";
-            }
+            if (txtsinginpassword.Text.Equals("     Password")) txtsinginpassword.Text = "";
         }
 
         private void txtsinginpassword_Leave(object sender, EventArgs e)
         {
-            if (txtsinginpassword.Text.Equals(""))
-            {
-                txtsinginpassword.Text = "     Password";
-            }
+            if (txtsinginpassword.Text.Equals("")) txtsinginpassword.Text = "     Password";
         }
 
         private void pbclose_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            this.Close();
-            home home1 = new home();
-            home1.Show();
+            Close();
+            new home().Show();
         }
 
         private void btnsignin_Click(object sender, EventArgs e)
         {
-            string connectionString;
-            SqlConnection cnn;
+            string id = txtsigninid.Text.Trim();
+            string password = txtsinginpassword.Text;
 
-            connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS;Initial catalog = ZMC_Academy;User ID=admin;Password=admin";
-
-            cnn = new SqlConnection(connectionString);
-            cnn.Open();
-            string sql = "Select * from Registration where Id = '" + txtsigninid.Text + "' and Password = '" + txtsinginpassword.Text + "'";
-            SqlCommand cmd = new SqlCommand(sql, cnn);
-            SqlDataReader reader = cmd.ExecuteReader();
-
-            if (reader.Read())
+            if (string.IsNullOrWhiteSpace(id) || id == "ID" ||
+                string.IsNullOrWhiteSpace(password) || password.Trim() == "Password")
             {
-                if (MessageBox.Show("Login Successfully", "User Login", MessageBoxButtons.OK, MessageBoxIcon.Information) == DialogResult.OK)
+                MessageBox.Show("Please enter your ID and password.", "User Login",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                string storedPassword = null;
+
+                using (SqlConnection connection = Database.OpenConnection())
+                using (var command = new SqlCommand(
+                    "SELECT Password FROM Registration WHERE Id = @Id", connection))
                 {
-                    signinID = txtsigninid.Text;
-
-                    this.Hide();
-                    Dash1 dash1 = new Dash1();
-                    dash1.ShowDialog();
+                    command.Parameters.Add("@Id", SqlDbType.VarChar, 10).Value = id;
+                    object result = command.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        storedPassword = Convert.ToString(result);
+                    }
                 }
+
+                if (!PasswordHasher.Verify(password, storedPassword))
+                {
+                    MessageBox.Show("Either your ID or password is incorrect.", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                signinID = id;
+                MessageBox.Show("Login successful.", "User Login",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Hide();
+                new Dash1().ShowDialog();
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("Either your id or password is incorrect", "Error", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Could not sign in. " + ex.Message, "Database Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            cnn.Close();
-
         }
-
-        public static string SigninForget;
 
         private void btnforget_Click(object sender, EventArgs e)
         {
-            if (txtsigninid.Text == "     ID")
+            string id = txtsigninid.Text.Trim();
+            if (string.IsNullOrWhiteSpace(id) || id == "ID")
             {
-                MessageBox.Show("Please Enter Your ID", "Error", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Please enter your ID.", "Reset Password",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
-            else
+
+            try
             {
-                string connectionString;
-                SqlConnection cnn;
-
-                connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS;Initial catalog = ZMC_Academy;User ID=admin;Password=admin";
-
-                cnn = new SqlConnection(connectionString);
-                cnn.Open();
-                string sql = "Select * from Registration where Id = '" + txtsigninid.Text + "' ";
-                SqlCommand cmd = new SqlCommand(sql, cnn);
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                if (reader.Read())
+                using (SqlConnection connection = Database.OpenConnection())
+                using (var command = new SqlCommand(
+                    "SELECT COUNT(1) FROM Registration WHERE Id = @Id", connection))
                 {
-                    if (MessageBox.Show("Your verification code has been sent", "Reset Password", MessageBoxButtons.OK, MessageBoxIcon.Information) == DialogResult.OK)
+                    command.Parameters.Add("@Id", SqlDbType.VarChar, 10).Value = id;
+                    bool exists = Convert.ToInt32(command.ExecuteScalar()) > 0;
+                    if (!exists)
                     {
-                        SigninForget = txtsigninid.Text;
-
-                        this.Hide();
-                        Resetpass1 resetpass1 = new Resetpass1();
-                        resetpass1.ShowDialog();
+                        MessageBox.Show("Please enter a valid ID.", "Reset Password",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
                     }
                 }
-                else
-                {
-                    MessageBox.Show("Please Enter A Valid ID", "Error", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                cnn.Close();   
-            }           
+
+                SigninForget = id;
+                Hide();
+                new Resetpass1().ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not start password reset. " + ex.Message,
+                    "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }
