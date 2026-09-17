@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+using System;
 using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Data.SqlClient;
+using System.Windows.Forms;
+using WF_CW2_TEST.Infrastructure;
 
 namespace WF_CW2_TEST
 {
@@ -16,110 +11,75 @@ namespace WF_CW2_TEST
         public Dash1()
         {
             InitializeComponent();
-
             lbltime.Text = DateTime.Now.ToLongTimeString();
+            LoadDisplayName();
+        }
 
-            string connectionString;
-            SqlConnection cnn;
-
-            connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS;Initial catalog = ZMC_Academy;User ID=admin;Password=admin";
-
-            cnn = new SqlConnection(connectionString);
-            cnn.Open();
-            string sql = "Select Name from Registration where Id = '" + Signin1.signinID + "'";
-            SqlCommand cmd = new SqlCommand(sql, cnn);
-            SqlDataReader reader = cmd.ExecuteReader();
-
-            if (reader.Read())
+        private void LoadDisplayName()
+        {
+            try
             {
-                txtnameshow.Text = "Welcome , " + reader.GetValue(0).ToString();
+                using (SqlConnection connection = Database.OpenConnection())
+                using (var command = new SqlCommand(
+                    "SELECT Name FROM Registration WHERE Id = @Id", connection))
+                {
+                    command.Parameters.Add("@Id", SqlDbType.VarChar, 10).Value = Signin1.signinID;
+                    object result = command.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        txtnameshow.Text = "Welcome, " + Convert.ToString(result);
+                    }
+                }
             }
-            cnn.Close();          
+            catch (Exception ex)
+            {
+                txtnameshow.Text = "Welcome";
+                MessageBox.Show("Profile details could not be loaded. " + ex.Message,
+                    "Dashboard", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private void pbclose_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
         private void Dash1_Load(object sender, EventArgs e)
         {
             panel7.Height = button1.Height;
             panel7.Top = button1.Top;
-            calander11.Hide();
-            library11.Hide();
-            attendence11.Hide();
-            pastpapers11.Hide();
-            courses11.Hide();
-            news11.Show();
+            ShowSection(news11);
         }
 
-        private void button3_Click(object sender, EventArgs e)
-        {
-            library11.Hide();
-            pastpapers11.Hide();
-            attendence11.Hide();
-            courses11.Hide();
-            news11.Hide();
-            calander11.Show();
-        }
-
-        private void button4_Click(object sender, EventArgs e)
-        {
-            calander11.Hide();
-            library11.Hide();
-            attendence11.Hide();
-            pastpapers11.Hide();
-            courses11.Hide();
-            news11.Show();
-        }
+        private void button3_Click(object sender, EventArgs e) { ShowSection(calander11); }
+        private void button4_Click(object sender, EventArgs e) { ShowSection(news11); }
 
         private void button6_Click(object sender, EventArgs e)
         {
             panel7.Height = button6.Height;
             panel7.Top = button6.Top;
-            calander11.Hide();
-            attendence11.Hide();
-            pastpapers11.Hide();
-            news11.Hide();
-            courses11.Hide();
-            library11.Show();
+            ShowSection(library11);
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
             panel7.Height = button1.Height;
             panel7.Top = button1.Top;
-            calander11.Hide();
-            library11.Hide();
-            courses11.Hide();
-            attendence11.Hide();
-            pastpapers11.Hide();
-            news11.Show();
+            ShowSection(news11);
         }
 
         private void button7_Click(object sender, EventArgs e)
         {
             panel7.Height = button7.Height;
             panel7.Top = button7.Top;
-            calander11.Hide();
-            library11.Hide();
-            news11.Hide();
-            courses11.Hide();
-            attendence11.Hide();
-            pastpapers11.Show();
+            ShowSection(pastpapers11);
         }
 
         private void button8_Click(object sender, EventArgs e)
         {
             panel7.Height = button8.Height;
             panel7.Top = button8.Top;
-            calander11.Hide();
-            library11.Hide();
-            courses11.Hide();
-            news11.Hide();
-            pastpapers11.Hide();
-            attendence11.Show();
+            ShowSection(attendence11);
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -127,11 +87,12 @@ namespace WF_CW2_TEST
             panel7.Height = button2.Height;
             panel7.Top = button2.Top;
 
-            if (MessageBox.Show("Do you want to sign out ?", "User Sign Out", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+            if (MessageBox.Show("Do you want to sign out?", "User Sign Out",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
             {
-                this.Hide();
-                home home1 = new home();
-                home1.Show();
+                Signin1.signinID = null;
+                Hide();
+                new home().Show();
             }
         }
 
@@ -139,23 +100,27 @@ namespace WF_CW2_TEST
         {
             panel7.Height = button9.Height;
             panel7.Top = button9.Top;
+            ShowSection(courses11);
+        }
+
+        private void ShowSection(Control active)
+        {
             calander11.Hide();
             library11.Hide();
-            news11.Hide();
-            pastpapers11.Hide();
             attendence11.Hide();
-            courses11.Show();
+            pastpapers11.Hide();
+            courses11.Hide();
+            news11.Hide();
+            active.Show();
         }
 
         private void timer1_Tick(object sender, EventArgs e)
         {
             lbltime.Text = DateTime.Now.ToLongTimeString();
-            timer1.Start();
         }
 
         private void courses11_Load(object sender, EventArgs e)
         {
-
         }
     }
 }
