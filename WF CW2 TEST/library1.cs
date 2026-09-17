@@ -1,146 +1,157 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
+using System;
 using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Data.SqlClient;
+using System.Windows.Forms;
+using WF_CW2_TEST.Infrastructure;
 
 namespace WF_CW2_TEST
 {
     public partial class library1 : UserControl
     {
+        public static string B_id;
+        public static string Return_date;
+
         public library1()
         {
             InitializeComponent();
         }
 
         private void btnaddtolist_Click(object sender, EventArgs e)
-        {           
-            DateTime time = DateTime.Now;
-            string format = "yyyy-MM-dd HH:mm:ss";
-            Return_date = Convert.ToString( dateTimePicker2.Value);
+        {
+            if (string.IsNullOrWhiteSpace(B_id))
+            {
+                MessageBox.Show("Select a book first.", "Library",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
-            string connectionString;
-            SqlConnection cnn;
+            DateTime returnDate = dateTimePicker2.Value.Date;
+            if (returnDate < DateTime.Today)
+            {
+                MessageBox.Show("Return date cannot be in the past.", "Library",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
-            connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS;Initial catalog = ZMC_Academy;User ID=admin;Password=admin";
+            try
+            {
+                using (SqlConnection connection = Database.OpenConnection())
+                using (var command = new SqlCommand(
+                    "INSERT INTO Booklist(B_addeddate,B_returndate,B_id,Id) VALUES(@Added,@Return,@BookId,@StudentId)", connection))
+                {
+                    command.Parameters.Add("@Added", SqlDbType.Date).Value = DateTime.Today;
+                    command.Parameters.Add("@Return", SqlDbType.Date).Value = returnDate;
+                    command.Parameters.Add("@BookId", SqlDbType.VarChar, 10).Value = B_id;
+                    command.Parameters.Add("@StudentId", SqlDbType.VarChar, 10).Value = Signin1.signinID;
+                    command.ExecuteNonQuery();
+                }
 
-            cnn = new SqlConnection(connectionString);
-            cnn.Open();
-
-            string sql = "INSERT INTO Booklist(B_addeddate,B_returndate,B_id,Id) VALUES('" + time.ToString(format) + "','" + Return_date + "','" + B_id + "','" + Signin1.signinID + "')";
-            SqlCommand cmd = new SqlCommand(sql, cnn);
-            cmd.ExecuteNonQuery();
-            cnn.Close();
-
-            MessageBox.Show("Your book has been added to the list", "Library", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Return_date = returnDate.ToString("yyyy-MM-dd");
+                MessageBox.Show("Your book has been added to the list.", "Library",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("The book could not be added. " + ex.Message,
+                    "Library", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void library1_Load(object sender, EventArgs e)
         {
             panel1.Visible = false;
             txtaddeddate.Text = DateTime.Now.ToLongDateString();
-
-            string connectionString;
-            SqlConnection cnn;
-
-            connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS; Initial Catalog = ZMC_Academy; User ID = admin; Password = admin";
-
-            cnn = new SqlConnection(connectionString);
-
-            cnn.Open();
-            String sql = "Select*from Books";
-            SqlCommand cmd = new SqlCommand(sql, cnn);
-
-            SqlDataAdapter ada = new SqlDataAdapter(cmd);
-            DataTable dataTable = new DataTable();
-            ada.Fill(dataTable);
-            dataGridView1.DataSource = dataTable;
-            cnn.Close();
+            LoadBooks(null);
         }
-
-        public static string B_id;
-        public static String Return_date;
 
         private void dataGridView1_CellClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value != null)
+            if (e.RowIndex < 0 || e.RowIndex >= dataGridView1.Rows.Count)
             {
-                B_id = Convert.ToString( dataGridView1.Rows[e.RowIndex].Cells[0].Value) ;
+                return;
             }
-            panel1.Visible = true;
-            string connectionString;
-            SqlConnection cnn;
 
-            connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS; Initial Catalog = ZMC_Academy; User ID = admin; Password = admin";
+            object value = dataGridView1.Rows[e.RowIndex].Cells[0].Value;
+            if (value == null)
+            {
+                return;
+            }
 
-            cnn = new SqlConnection(connectionString);
-
-            cnn.Open();
-            String sql = "Select*from Books where B_id ="+ B_id +"";
-            SqlCommand cmd = new SqlCommand(sql, cnn);
-
-            SqlDataAdapter ada = new SqlDataAdapter(cmd);
-            DataSet ds = new DataSet();
-            ada.Fill(ds);
-
-            txtbname.Text = ds.Tables[0].Rows[0][1].ToString();
-            txtbid.Text = ds.Tables[0].Rows[0][0].ToString();
-            txtbauthor.Text = ds.Tables[0].Rows[0][2].ToString();
-
-            cnn.Close();          
+            B_id = Convert.ToString(value);
+            LoadSelectedBook(B_id);
         }
 
         private void txtsearchbar_TextChanged(object sender, EventArgs e)
         {
-            if (txtsearchbar.Text !="")
+            LoadBooks(txtsearchbar.Text.Trim());
+        }
+
+        private void LoadBooks(string prefix)
+        {
+            try
             {
-                string connectionString;
-                SqlConnection cnn;
+                using (SqlConnection connection = Database.OpenConnection())
+                using (var command = new SqlCommand(
+                    string.IsNullOrWhiteSpace(prefix)
+                        ? "SELECT B_id, B_name, B_author FROM Books ORDER BY B_name"
+                        : "SELECT B_id, B_name, B_author FROM Books WHERE B_name LIKE @Prefix ORDER BY B_name",
+                    connection))
+                using (var adapter = new SqlDataAdapter(command))
+                {
+                    if (!string.IsNullOrWhiteSpace(prefix))
+                    {
+                        command.Parameters.Add("@Prefix", SqlDbType.VarChar, 30).Value = prefix + "%";
+                    }
 
-                connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS; Initial Catalog = ZMC_Academy; User ID = admin; Password = admin";
-
-                cnn = new SqlConnection(connectionString);
-
-                cnn.Open();
-                String sql = "Select*from Books where B_name LIKE '"+txtsearchbar.Text+"%'";
-                SqlCommand cmd = new SqlCommand(sql, cnn);
-
-                SqlDataAdapter ada = new SqlDataAdapter(cmd);
-                DataTable dataTable = new DataTable();
-                ada.Fill(dataTable);
-                dataGridView1.DataSource = dataTable;
-                cnn.Close();
+                    var table = new DataTable();
+                    adapter.Fill(table);
+                    dataGridView1.DataSource = table;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                string connectionString;
-                SqlConnection cnn;
+                MessageBox.Show("Books could not be loaded. " + ex.Message,
+                    "Library", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
 
-                connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS; Initial Catalog = ZMC_Academy; User ID = admin; Password = admin";
+        private void LoadSelectedBook(string bookId)
+        {
+            try
+            {
+                using (SqlConnection connection = Database.OpenConnection())
+                using (var command = new SqlCommand(
+                    "SELECT B_id, B_name, B_author FROM Books WHERE B_id = @BookId", connection))
+                {
+                    command.Parameters.Add("@BookId", SqlDbType.VarChar, 10).Value = bookId;
+                    using (SqlDataReader reader = command.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                        {
+                            panel1.Visible = false;
+                            return;
+                        }
 
-                cnn = new SqlConnection(connectionString);
-
-                cnn.Open();
-                String sql = "Select*from Books";
-                SqlCommand cmd = new SqlCommand(sql, cnn);
-
-                SqlDataAdapter ada = new SqlDataAdapter(cmd);
-                DataTable dataTable = new DataTable();
-                ada.Fill(dataTable);
-                dataGridView1.DataSource = dataTable;
-                cnn.Close();
+                        txtbid.Text = Convert.ToString(reader["B_id"]);
+                        txtbname.Text = Convert.ToString(reader["B_name"]);
+                        txtbauthor.Text = Convert.ToString(reader["B_author"]);
+                        panel1.Visible = true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Book details could not be loaded. " + ex.Message,
+                    "Library", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void btnrefresh_Click(object sender, EventArgs e)
         {
             txtsearchbar.Clear();
+            B_id = null;
             panel1.Visible = false;
+            LoadBooks(null);
         }
     }
 }
