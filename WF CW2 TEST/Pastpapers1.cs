@@ -1,18 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
+using System;
 using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Data.SqlClient;
+using System.Windows.Forms;
+using WF_CW2_TEST.Infrastructure;
 
 namespace WF_CW2_TEST
 {
     public partial class Pastpapers1 : UserControl
     {
+        public static string P_id;
+        public static string Return_date;
+
         public Pastpapers1()
         {
             InitializeComponent();
@@ -22,125 +20,135 @@ namespace WF_CW2_TEST
         {
             panel1.Visible = false;
             txtaddeddate.Text = DateTime.Now.ToLongDateString();
-
-            string connectionString;
-            SqlConnection cnn;
-
-            connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS; Initial Catalog = ZMC_Academy; User ID = admin; Password = admin";
-
-            cnn = new SqlConnection(connectionString);
-
-            cnn.Open();
-            String sql = "Select*from Pastpapers";
-            SqlCommand cmd = new SqlCommand(sql, cnn);
-
-            SqlDataAdapter ada = new SqlDataAdapter(cmd);
-            DataTable dataTable = new DataTable();
-            ada.Fill(dataTable);
-            dataGridView1.DataSource = dataTable;
-            cnn.Close();
+            LoadPapers(null);
         }
-
-        public static string P_id;
-        public static String Return_date;
 
         private void dataGridView1_CellClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value != null)
+            if (e.RowIndex < 0 || e.RowIndex >= dataGridView1.Rows.Count)
             {
-                P_id = Convert.ToString(dataGridView1.Rows[e.RowIndex].Cells[0].Value);
+                return;
             }
-            panel1.Visible = true;
-            string connectionString;
-            SqlConnection cnn;
 
-            connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS; Initial Catalog = ZMC_Academy; User ID = admin; Password = admin";
+            object value = dataGridView1.Rows[e.RowIndex].Cells[0].Value;
+            if (value == null) return;
 
-            cnn = new SqlConnection(connectionString);
-
-            cnn.Open();
-            String sql = "Select*from Pastpapers where P_id =" + P_id + "";
-            SqlCommand cmd = new SqlCommand(sql, cnn);
-
-            SqlDataAdapter ada = new SqlDataAdapter(cmd);
-            DataSet ds = new DataSet();
-            ada.Fill(ds);
-
-            txtsubject.Text = ds.Tables[0].Rows[0][1].ToString();
-            txtpaperid.Text = ds.Tables[0].Rows[0][0].ToString();
-            txtyear.Text = ds.Tables[0].Rows[0][2].ToString();
-
-            cnn.Close();
+            P_id = Convert.ToString(value);
+            LoadSelectedPaper(P_id);
         }
 
         private void txtsearchbar_TextChanged(object sender, EventArgs e)
         {
-            if (txtsearchbar.Text != "")
-            {
-                string connectionString;
-                SqlConnection cnn;
-
-                connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS; Initial Catalog = ZMC_Academy; User ID = admin; Password = admin";
-
-                cnn = new SqlConnection(connectionString);
-
-                cnn.Open();
-                String sql = "Select*from Pastpapers where Subject LIKE '" + txtsearchbar.Text + "%'";
-                SqlCommand cmd = new SqlCommand(sql, cnn);
-
-                SqlDataAdapter ada = new SqlDataAdapter(cmd);
-                DataTable dataTable = new DataTable();
-                ada.Fill(dataTable);
-                dataGridView1.DataSource = dataTable;
-                cnn.Close();
-            }
-            else
-            {
-                string connectionString;
-                SqlConnection cnn;
-
-                connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS; Initial Catalog = ZMC_Academy; User ID = admin; Password = admin";
-
-                cnn = new SqlConnection(connectionString);
-
-                cnn.Open();
-                String sql = "Select*from Pastpapers";
-                SqlCommand cmd = new SqlCommand(sql, cnn);
-
-                SqlDataAdapter ada = new SqlDataAdapter(cmd);
-                DataTable dataTable = new DataTable();
-                ada.Fill(dataTable);
-                dataGridView1.DataSource = dataTable;
-                cnn.Close();
-            }
+            LoadPapers(txtsearchbar.Text.Trim());
         }
 
         private void btnrefresh_Click(object sender, EventArgs e)
         {
             txtsearchbar.Clear();
+            P_id = null;
             panel1.Visible = false;
+            LoadPapers(null);
         }
 
         private void btnaddtolist_Click(object sender, EventArgs e)
-        {           
-            DateTime time = DateTime.Now;
-            string format = "yyyy-MM-dd HH:mm:ss";
-            Return_date = Convert.ToString(dateTimePicker2.Value);
+        {
+            if (string.IsNullOrWhiteSpace(P_id))
+            {
+                MessageBox.Show("Select a paper first.", "Past papers",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
-            string connectionString;
-            SqlConnection cnn;
+            DateTime returnDate = dateTimePicker2.Value.Date;
+            if (returnDate < DateTime.Today)
+            {
+                MessageBox.Show("Return date cannot be in the past.", "Past papers",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
-            connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS;Initial catalog = ZMC_Academy;User ID=admin;Password=admin";
+            try
+            {
+                using (SqlConnection connection = Database.OpenConnection())
+                using (var command = new SqlCommand(
+                    "INSERT INTO Pastpaperlist(P_addeddate,P_returndate,P_id,Id) VALUES(@Added,@Return,@PaperId,@StudentId)", connection))
+                {
+                    command.Parameters.Add("@Added", SqlDbType.Date).Value = DateTime.Today;
+                    command.Parameters.Add("@Return", SqlDbType.Date).Value = returnDate;
+                    command.Parameters.Add("@PaperId", SqlDbType.VarChar, 10).Value = P_id;
+                    command.Parameters.Add("@StudentId", SqlDbType.VarChar, 10).Value = Signin1.signinID;
+                    command.ExecuteNonQuery();
+                }
 
-            cnn = new SqlConnection(connectionString);
-            cnn.Open();
+                Return_date = returnDate.ToString("yyyy-MM-dd");
+                MessageBox.Show("Your paper has been added to the list.", "Past papers",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("The paper could not be added. " + ex.Message,
+                    "Past papers", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
 
-            string sql = "INSERT INTO Pastpaperlist(P_addeddate,P_returndate,P_id,Id) VALUES('" + time.ToString(format) + "','" + Return_date + "','" + P_id + "','" + Signin1.signinID + "')";
-            SqlCommand cmd = new SqlCommand(sql, cnn);
-            cmd.ExecuteNonQuery();
-            cnn.Close();
+        private void LoadPapers(string prefix)
+        {
+            try
+            {
+                using (SqlConnection connection = Database.OpenConnection())
+                using (var command = new SqlCommand(
+                    string.IsNullOrWhiteSpace(prefix)
+                        ? "SELECT P_id, Subject, Year FROM Pastpapers ORDER BY Subject, Year DESC"
+                        : "SELECT P_id, Subject, Year FROM Pastpapers WHERE Subject LIKE @Prefix ORDER BY Subject, Year DESC",
+                    connection))
+                using (var adapter = new SqlDataAdapter(command))
+                {
+                    if (!string.IsNullOrWhiteSpace(prefix))
+                    {
+                        command.Parameters.Add("@Prefix", SqlDbType.VarChar, 20).Value = prefix + "%";
+                    }
 
-            MessageBox.Show("Your paper has been added to the list", "Past papers", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    var table = new DataTable();
+                    adapter.Fill(table);
+                    dataGridView1.DataSource = table;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Past papers could not be loaded. " + ex.Message,
+                    "Past papers", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LoadSelectedPaper(string paperId)
+        {
+            try
+            {
+                using (SqlConnection connection = Database.OpenConnection())
+                using (var command = new SqlCommand(
+                    "SELECT P_id, Subject, Year FROM Pastpapers WHERE P_id = @PaperId", connection))
+                {
+                    command.Parameters.Add("@PaperId", SqlDbType.VarChar, 10).Value = paperId;
+                    using (SqlDataReader reader = command.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                        {
+                            panel1.Visible = false;
+                            return;
+                        }
+
+                        txtpaperid.Text = Convert.ToString(reader["P_id"]);
+                        txtsubject.Text = Convert.ToString(reader["Subject"]);
+                        txtyear.Text = Convert.ToString(reader["Year"]);
+                        panel1.Visible = true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Paper details could not be loaded. " + ex.Message,
+                    "Past papers", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }
