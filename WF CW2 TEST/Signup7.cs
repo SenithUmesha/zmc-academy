@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Data.SqlClient;
 
 namespace WF_CW2_TEST
 {
@@ -16,8 +10,8 @@ namespace WF_CW2_TEST
         public static string method;
         public static string type;
         public static string expiredate;
-        public static int cvc;
-        public static int cardno;
+        public static string cvc;
+        public static string cardno;
 
         public Signup7()
         {
@@ -26,174 +20,96 @@ namespace WF_CW2_TEST
 
         private void btnback_Click(object sender, EventArgs e)
         {
-            this.Close();
-            Signup6 signup6 = new Signup6();
-            signup6.Show();
+            Close();
+            new Signup6().Show();
         }
 
         private void btnnext_Click(object sender, EventArgs e)
         {
-            if (ValidateChildren(ValidationConstraints.Enabled))
+            if (!ValidateChildren(ValidationConstraints.Enabled))
             {
-                expiredate = dateTimePicker1.Value.ToString();
-                cvc = Convert.ToInt32(txtcvc.Text);
-                cardno = Convert.ToInt32(txtcardno.Text);
-
-                if (cmbmethod.SelectedIndex == 0)
-                {
-                    method = cmbmethod.Text;
-                    if (cmbtype.SelectedIndex == 0)
-                    {
-                        type = cmbtype.Text;
-                        if ( MessageBox.Show("By creating a ZMC Academy account , you are agreeing to be bound by the terms of use.", "Terms of use", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                        {
-                            this.Hide();
-                            Signup9 signup9 = new Signup9();
-                            signup9.ShowDialog();
-                        }
-                    }
-                    else if (cmbtype.SelectedIndex == 1)
-                    {
-                        type = cmbtype.Text;
-                        if (MessageBox.Show("By creating a ZMC Academy account , you are agreeing to be bound by the terms of use.", "Terms of use", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                        {
-                            this.Hide();
-                            Signup9 signup9 = new Signup9();
-                            signup9.ShowDialog();
-                        }
-                    }
-                    else if (cmbtype.SelectedIndex == 2)
-                    {
-                        type = cmbtype.Text;
-                        if (MessageBox.Show("By creating a ZMC Academy account , you are agreeing to be bound by the terms of use.", "Terms of use", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                        {
-                            this.Hide();
-                            Signup9 signup9 = new Signup9();
-                            signup9.ShowDialog();
-                        }
-                    }
-                    else if (cmbtype.SelectedItem == null)
-                    {
-                        MessageBox.Show("Please Select A Item", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    else
-                    {
-                        type = cmbtype.Text;
-                        if (MessageBox.Show("By creating a ZMC Academy account , you are agreeing to be bound by the terms of use.", "Terms of use", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                        {
-                            this.Hide();
-                            Signup9 signup9 = new Signup9();
-                            signup9.ShowDialog();
-                        }
-                    }
-                }
-                else if (cmbmethod.SelectedItem == null)
-                {
-                    MessageBox.Show("Please Select A Item", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                else
-                {
-                    method = cmbmethod.Text;
-                    if (cmbtype.SelectedIndex == 0)
-                    {
-                        type = cmbtype.Text;
-                        if (MessageBox.Show("By creating a ZMC Academy account , you are agreeing to be bound by the terms of use.", "Terms of use", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                        {
-                            this.Hide();
-                            Signup9 signup9 = new Signup9();
-                            signup9.ShowDialog();
-                        }
-                    }
-                    else if (cmbtype.SelectedIndex == 1)
-                    {
-                        type = cmbtype.Text;
-                        if (MessageBox.Show("By creating a ZMC Academy account , you are agreeing to be bound by the terms of use.", "Terms of use", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                        {
-                            this.Hide();
-                            Signup9 signup9 = new Signup9();
-                            signup9.ShowDialog();
-                        }
-                    }
-                    else if (cmbtype.SelectedIndex == 2)
-                    {
-                        type = cmbtype.Text;
-                        if (MessageBox.Show("By creating a ZMC Academy account , you are agreeing to be bound by the terms of use.", "Terms of use", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                        {
-                            this.Hide();
-                            Signup9 signup9 = new Signup9();
-                            signup9.ShowDialog();
-                        }
-                    }
-                    else if (cmbtype.SelectedItem == null)
-                    {
-                        MessageBox.Show("Please Select A Item", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    else
-                    {
-                        type = cmbtype.Text;
-                        if (MessageBox.Show("By creating a ZMC Academy account , you are agreeing to be bound by the terms of use.", "Terms of use", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                        {
-                            this.Hide();
-                            Signup9 signup9 = new Signup9();
-                            signup9.ShowDialog();
-                        }
-                    }
-                }
+                return;
             }
+
+            if (cmbmethod.SelectedItem == null || cmbtype.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a payment method and plan.", "Warning",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            string normalizedCard = new string(txtcardno.Text.Where(char.IsDigit).ToArray());
+            string normalizedCvc = new string(txtcvc.Text.Where(char.IsDigit).ToArray());
+
+            if (normalizedCard.Length < 12 || normalizedCard.Length > 19)
+            {
+                MessageBox.Show("Please enter a valid card number.", "Warning",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (normalizedCvc.Length < 3 || normalizedCvc.Length > 4)
+            {
+                MessageBox.Show("Please enter a valid CVC.", "Warning",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            method = cmbmethod.Text;
+            type = cmbtype.Text;
+            expiredate = dateTimePicker1.Value.ToString("yyyy-MM");
+            cardno = normalizedCard;
+            cvc = normalizedCvc;
+
+            if (MessageBox.Show(
+                    "By creating a ZMC Academy account, you are agreeing to be bound by the terms of use.",
+                    "Terms of use", MessageBoxButtons.YesNo, MessageBoxIcon.Information) != DialogResult.Yes)
+            {
+                return;
+            }
+
+            Hide();
+            new Signup9().ShowDialog();
         }
 
         private void pbclose_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
         private void txtcardno_Validating(object sender, CancelEventArgs e)
         {
-            if (string.IsNullOrEmpty(txtcardno.Text))
-            {
-                e.Cancel = true;
-                txtcardno.Focus();
-                errorProvider1.SetError(txtcardno, "Please Enter Your Card Number");
-            }
-            else
-            {
-                e.Cancel = false;
-                errorProvider1.SetError(txtcardno, null);
-            }
+            ValidateRequired(txtcardno, "Please Enter Your Card Number", e);
         }
 
         private void txtcvc_Validating(object sender, CancelEventArgs e)
         {
-            if (string.IsNullOrEmpty(txtcvc.Text))
-            {
-                e.Cancel = true;
-                txtcvc.Focus();
-                errorProvider1.SetError(txtcvc, "Please Enter Your CVC");
-            }
-            else
-            {
-                e.Cancel = false;
-                errorProvider1.SetError(txtcvc, null);
-            }
+            ValidateRequired(txtcvc, "Please Enter Your CVC", e);
+        }
+
+        private void ValidateRequired(Control control, string message, CancelEventArgs e)
+        {
+            bool missing = string.IsNullOrWhiteSpace(control.Text);
+            e.Cancel = missing;
+            errorProvider1.SetError(control, missing ? message : null);
+            if (missing) control.Focus();
         }
 
         private void txtcardno_KeyPress(object sender, KeyPressEventArgs e)
         {
-            char chr = e.KeyChar;
-            if (!char.IsDigit(chr) && chr != 8)
-            {
-                e.Handled = true;
-                MessageBox.Show("Please Enter A Valid Value", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            RestrictToDigits(e);
         }
 
         private void txtcvc_KeyPress(object sender, KeyPressEventArgs e)
         {
-            char chr = e.KeyChar;
-            if (!char.IsDigit(chr) && chr != 8)
+            RestrictToDigits(e);
+        }
+
+        private void RestrictToDigits(KeyPressEventArgs e)
+        {
+            if (!char.IsDigit(e.KeyChar) && e.KeyChar != 8)
             {
                 e.Handled = true;
-                MessageBox.Show("Please Enter A Valid Value", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
