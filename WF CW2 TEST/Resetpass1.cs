@@ -1,20 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+using System;
 using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Data.SqlClient;
-using System.Net;
-using System.Net.Mail;
+using System.Windows.Forms;
+using WF_CW2_TEST.Infrastructure;
+using WF_CW2_TEST.Services;
 
 namespace WF_CW2_TEST
 {
     public partial class Resetpass1 : Form
     {
+        public static string resetemail;
+        public static string randomcode1;
+
         public Resetpass1()
         {
             InitializeComponent();
@@ -22,80 +19,56 @@ namespace WF_CW2_TEST
 
         private void button1_Click(object sender, EventArgs e)
         {
-            this.Hide();
-            Signin1 signin1 = new Signin1();
-            signin1.Show();
+            Hide();
+            new Signin1().Show();
         }
-
-        public static string resetemail;
-        public static string randomcode1;
 
         private void Resetpass1_Load(object sender, EventArgs e)
         {
             try
             {
-                string connectionString;
-                SqlConnection cnn;
-
-                connectionString = @"Data Source = SENITHUMESHA\SQLEXPRESS;Initial catalog = ZMC_Academy;User ID=admin;Password=admin";
-
-                cnn = new SqlConnection(connectionString);
-                cnn.Open();
-                string sql = "Select Email from Registration where Id = '" + Signin1.SigninForget + "'";
-                SqlCommand cmd = new SqlCommand(sql, cnn);
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                if (reader.Read())
+                using (SqlConnection connection = Database.OpenConnection())
+                using (var command = new SqlCommand(
+                    "SELECT Email FROM Registration WHERE Id = @Id", connection))
                 {
-                    resetemail = "" + reader.GetValue(0).ToString();
+                    command.Parameters.Add("@Id", SqlDbType.VarChar, 10).Value = Signin1.SigninForget;
+                    object result = command.ExecuteScalar();
+                    resetemail = result == null || result == DBNull.Value ? null : Convert.ToString(result);
                 }
-                cnn.Close();
 
-                Random random = new Random();
-                randomcode1 = (random.Next(999999)).ToString();
+                if (string.IsNullOrWhiteSpace(resetemail))
+                {
+                    throw new InvalidOperationException("No email address is registered for this account.");
+                }
 
-                MailMessage mail = new MailMessage();
-                SmtpClient SmtpServer = new SmtpClient("smtp.gmail.com");
-
-                mail.From = new MailAddress("senithumeshac@gmail.com");
-                mail.To.Add(resetemail);
-                mail.Subject = "Password reset code";
-                mail.Body = "Here is your code : " + randomcode1;
-
-                SmtpServer.Port = 587;
-                SmtpServer.Credentials = new System.Net.NetworkCredential("senithumeshac@gmail.com", "senithumeshac#");
-                SmtpServer.EnableSsl = true;
-
-                SmtpServer.Send(mail);            
+                randomcode1 = EmailService.GenerateVerificationCode();
+                EmailService.SendVerificationCode(resetemail, randomcode1);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                if (MessageBox.Show("Please check your internet connection", "Reset Password", MessageBoxButtons.OK, MessageBoxIcon.Information) == DialogResult.OK)
-                {
-                    this.Close();
-                    Signin1 signin1 = new Signin1();
-                    signin1.Show();
-                }
+                MessageBox.Show("Password reset email could not be sent. " + ex.Message,
+                    "Reset Password", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Close();
+                new Signin1().Show();
             }
         }
 
         private void btnsignin_Click(object sender, EventArgs e)
         {
-            if (randomcode1 == txtcode.Text)
+            if (string.Equals(randomcode1, txtcode.Text.Trim(), StringComparison.Ordinal))
             {
-                this.Hide();
-                Resetpass2 resetpass2 = new Resetpass2();
-                resetpass2.ShowDialog();
+                Hide();
+                new Resetpass2().ShowDialog();
+                return;
             }
-            else
-            {
-                MessageBox.Show("Please Enter the Valid Code", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+
+            MessageBox.Show("Please enter the valid code.", "Warning",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         private void pbclose_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
     }
 }
