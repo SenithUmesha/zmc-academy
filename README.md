@@ -6,6 +6,42 @@ ZMC Academy is an early desktop learning-management experiment built with **C#**
 
 It is not a current production LMS. This repository is kept as a snapshot of the kind of desktop/database work I was doing before most of my projects moved toward mobile apps and cleaner application boundaries.
 
+
+## screenshots
+
+These are the original screenshots from the project-era portfolio archive, now kept with the public repo so the UI does not disappear behind a private portfolio repository.
+
+<p align="center">
+  <img src="docs/screenshots/1.jpg" width="48%" alt="ZMC Academy screenshot 1" />
+  <img src="docs/screenshots/2.jpg" width="48%" alt="ZMC Academy screenshot 2" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/3.jpg" width="48%" alt="ZMC Academy screenshot 3" />
+  <img src="docs/screenshots/4.jpg" width="48%" alt="ZMC Academy screenshot 4" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/5.jpg" width="48%" alt="ZMC Academy screenshot 5" />
+  <img src="docs/screenshots/6.jpg" width="48%" alt="ZMC Academy screenshot 6" />
+</p>
+
+<details>
+<summary>more screens</summary>
+
+<p align="center">
+  <img src="docs/screenshots/7.jpg" width="48%" alt="ZMC Academy screenshot 7" />
+  <img src="docs/screenshots/8.jpg" width="48%" alt="ZMC Academy screenshot 8" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/9.jpg" width="48%" alt="ZMC Academy screenshot 9" />
+  <img src="docs/screenshots/10.jpg" width="48%" alt="ZMC Academy screenshot 10" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/11.jpg" width="48%" alt="ZMC Academy screenshot 11" />
+  <img src="docs/screenshots/12.jpg" width="48%" alt="ZMC Academy screenshot 12" />
+</p>
+
+</details>
+
 ## what it does
 
 The app models a small academy/student portal with two broad parts:
